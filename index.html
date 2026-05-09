@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ahorro 2026">
+  <title>Ahorro 2026</title>
+  <style>
+    /* ── Variables light / dark ── */
+    :root {
+      --green: #16a34a;
+      --green-dk: #15803d;
+      --green-bg: #dcfce7;
+      --blue: #1d4ed8;
+      --bg: #f0fdf4;
+      --card: #ffffff;
+      --fill: rgba(0,0,0,0.05);
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --shadow: 0 2px 8px rgba(0,0,0,0.08);
+      --radius: 14px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1e;
+        --card: #2c2c2e;
+        --fill: rgba(255,255,255,0.07);
+        --text: #f2f2f7;
+        --muted: #aeaeb2;
+        --border: #48484a;
+        --shadow: none;
+        --green-bg: rgba(22,163,74,0.15);
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overscroll-behavior: none;
+    }
+
+    /* ── Navegación entre pantallas ── */
+    .screen {
+      position: fixed;
+      inset: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      background: var(--bg);
+      transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform;
+    }
+    .screen.off-right  { transform: translateX(100%); pointer-events: none; }
+    .screen.off-left   { transform: translateX(-28%); pointer-events: none; }
+
+    /* ── Header verde ── */
+    .header {
+      background: linear-gradient(150deg, var(--green-dk) 0%, var(--green) 100%);
+      color: white;
+      padding: 14px 16px 16px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .app-name { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+    .today-chip {
+      background: rgba(255,255,255,0.18);
+      border-radius: 20px;
+      padding: 4px 11px;
+      font-size: 12px;
+    }
+    .prog-box {
+      background: rgba(255,255,255,0.13);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .prog-lbl  { font-size: 11px; opacity: 0.75; margin-bottom: 3px; }
+    .prog-amt  { font-size: 30px; font-weight: 800; margin-bottom: 8px; }
+    .prog-bar  { background: rgba(255,255,255,0.25); border-radius: 4px; height: 6px; overflow: hidden; }
+    .prog-fill { height: 100%; background: white; border-radius: 4px; transition: width 0.4s; }
+    .prog-foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; opacity: 0.72; }
+
+    /* ── Barra de nav mes ── */
+    .nav-bar {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      padding-top: max(12px, env(safe-area-inset-top));
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--green);
+      font-size: 17px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      padding: 2px 0;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .nav-title { font-size: 17px; font-weight: 700; }
+
+    /* ── Contenido ── */
+    .content {
+      padding: 14px 14px calc(28px + env(safe-area-inset-bottom));
+    }
+    .sec-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+
+    /* ── Tarjeta de mes (home) ── */
+    .month-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      user-select: none;
+      transition: opacity 0.1s;
+    }
+    .month-card:active { opacity: 0.65; }
+
+    /* Imagen del personaje */
+    .char-wrap {
+      width: 54px; height: 54px;
+      border-radius: 12px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--green-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .char-img  { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .char-init {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--green);
+      display: none;
+    }
+
+    .month-info { flex: 1; min-width: 0; }
+    .month-row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+    .month-name { font-size: 16px; font-weight: 700; }
+    .month-days { font-size: 12px; color: var(--muted); }
+    .seal { color: var(--green); margin-left: 4px; }
+    .prog-track { background: var(--fill); border-radius: 3px; height: 5px; overflow: hidden; margin-bottom: 5px; }
+    .prog-track-fill { height: 100%; background: var(--green); border-radius: 3px; }
+    .month-row2 { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+    .m-saved { font-weight: 700; color: var(--green); }
+    .m-of { color: var(--muted); }
+    .chevron { color: var(--muted); margin-left: auto; font-size: 13px; }
+
+    /* ── Resumen mes ── */
+    .sum-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr 1px 1fr;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .sum-item { text-align: center; padding: 12px 6px; }
+    .sum-div  { background: var(--border); }
+    .sum-val  { font-size: 13px; font-weight: 700; color: var(--green); line-height: 1.3; word-break: break-all; }
+    .sum-val.n { color: var(--text); }
+    .sum-val.m { color: var(--muted); }
+    .sum-lbl  { font-size: 10px; color: var(--muted); margin-top: 3px; }
+    .big-prog { background: var(--fill); border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 12px; }
+    .big-prog-fill { height: 100%; background: var(--green); border-radius: 4px; transition: width 0.4s; }
+
+    /* ── Tarjeta de día ── */
+    .day-card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      user-select: none;
+      transition: transform 0.1s;
+    }
+    .day-card:active { transform: scale(0.975); }
+    .day-card.done   { background: var(--green-bg); border-color: var(--green); }
+    .day-card.hoy    { border-color: var(--blue); }
+    .day-card.done.hoy { border-color: var(--green); }
+
+    .date-col { display: flex; flex-direction: column; align-items: center; min-width: 36px; }
+    .d-num  { font-size: 22px; font-weight: 800; line-height: 1; color: var(--text); }
+    .d-name { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+    .hoy-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--blue); margin-top: 3px; }
+    .day-card.done .d-num  { color: var(--green); }
+    .weekend .d-num { color: var(--green); opacity: 0.8; }
+    .day-card.done.weekend .d-num { opacity: 1; }
+
+    .mid-col { flex: 1; }
+    .d-amt  { font-size: 17px; font-weight: 700; color: var(--text); }
+    .d-serie{ font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .day-card.done .d-amt { color: var(--green); }
+
+    .check {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 14px;
+      color: white;
+      transition: all 0.15s;
+    }
+    .day-card.done .check { background: var(--green); border-color: var(--green); }
+  </style>
+</head>
+<body>
+
+<!-- ════════════ PANTALLA INICIO ════════════ -->
+<div class="screen" id="homeScreen">
+  <div class="header">
+    <div class="header-row">
+      <div class="app-name">💰 Mi Ahorro 2026</div>
+      <div class="today-chip" id="todayChip"></div>
+    </div>
+    <div class="prog-box">
+      <div class="prog-lbl">TOTAL GUARDADO</div>
+      <div class="prog-amt" id="hSaved">$0</div>
+      <div class="prog-bar"><div class="prog-fill" id="hFill" style="width:0%"></div></div>
+      <div class="prog-foot">
+        <span id="hDays">0 de 365 días</span>
+        <span id="hPct">0.00%</span>
+      </div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="sec-title">Meses</div>
+    <div id="monthList"></div>
+  </div>
+</div>
+
+<!-- ════════════ PANTALLA MES ════════════ -->
+<div class="screen off-right" id="monthScreen">
+  <div class="nav-bar">
+    <button class="back-btn" onclick="goHome()">‹ Inicio</button>
+    <div class="nav-title" id="mTitle"></div>
+  </div>
+  <div class="content">
+    <div class="sum-card">
+      <div class="sum-item"><div class="sum-val" id="sSaved">$0</div><div class="sum-lbl">Guardado</div></div>
+      <div class="sum-div"></div>
+      <div class="sum-item"><div class="sum-val n" id="sGoal">$0</div><div class="sum-lbl">Meta</div></div>
+      <div class="sum-div"></div>
+      <div class="sum-item"><div class="sum-val m" id="sDays">0/0</div><div class="sum-lbl">Días</div></div>
+    </div>
+    <div class="big-prog"><div class="big-prog-fill" id="mFill" style="width:0%"></div></div>
+    <div id="dayList"></div>
+  </div>
+</div>
+
+<script>
+  // ── Datos ──
+  const MESES    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const DIAS_C   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const CHARS    = ['goku','vegeta','gohan','piccolo','bulma','trunks','krilin','cell','freezer','beerus','broly','gogeta'];
+
+  function buildCycle() {
+    const pats = [[2000,2000,100000],[4000,4000,100000],[5000,5000,100000],[20000,20000,100000],[25000,25000,100000]];
+    const names = ['Serie ×$2.000','Serie ×$4.000','Serie ×$5.000','Serie ×$20.000','Serie ×$25.000'];
+    const c = [];
+    pats.forEach(([ini, paso, fin], i) => {
+      for (let v = ini; v <= fin; v += paso) c.push({ monto: v, serie: names[i] });
+    });
+    return c; // 104 días
+  }
+
+  const CICLO = buildCycle();
+
+  function buildYear() {
+    const days = []; let idx = 0;
+    for (let m = 0; m < 12; m++) {
+      const total = new Date(2026, m + 1, 0).getDate();
+      for (let d = 1; d <= total; d++) {
+        const fecha = new Date(2026, m, d);
+        const key = `2026-${s2(m+1)}-${s2(d)}`;
+        const e = CICLO[idx % CICLO.length];
+        days.push({ m, d, dow: fecha.getDay(), idx, key, monto: e.monto, serie: e.serie });
+        idx++;
+      }
+    }
+    return days;
+  }
+
+  function s2(n) { return String(n).padStart(2,'0'); }
+
+  const YEAR  = buildYear();
+  const META  = YEAR.reduce((s, x) => s + x.monto, 0);
+  let done    = JSON.parse(localStorage.getItem('ahorro2026v2') || '{}');
+  let mesActual = 0;
+
+  const HOY = (() => {
+    const h = new Date();
+    if (h.getFullYear() !== 2026) return null;
+    return `2026-${s2(h.getMonth()+1)}-${s2(h.getDate())}`;
+  })();
+
+  function save() { localStorage.setItem('ahorro2026v2', JSON.stringify(done)); }
+
+  function fmt(n) { return '$' + n.toLocaleString('es-CO'); }
+
+  // ── Totales ──
+  function totalSaved()  { return YEAR.filter(d => done[d.key]).reduce((s,d) => s+d.monto, 0); }
+  function totalDone()   { return Object.keys(done).length; }
+  function mSaved(m)     { return YEAR.filter(d => d.m===m && done[d.key]).reduce((s,d) => s+d.monto, 0); }
+  function mGoal(m)      { return YEAR.filter(d => d.m===m).reduce((s,d) => s+d.monto, 0); }
+  function mDone(m)      { return YEAR.filter(d => d.m===m && done[d.key]).length; }
+  function mDays(m)      { return YEAR.filter(d => d.m===m).length; }
+  function mProg(m)      { const g=mGoal(m); return g>0 ? mSaved(m)/g : 0; }
+
+  // ── Imagen con fallback ──
+  function charImg(idx) {
+    const name = CHARS[idx];
+    const init = name[0].toUpperCase();
+    return `<div class="char-wrap">
+      <img class="char-img" src="${name}.png" alt="${name}"
+           onerror="this.style.display='none';this.nextSibling.style.display='flex'">
+      <div class="char-init">${init}</div>
+    </div>`;
+  }
+
+  // ── Header global ──
+  function refreshHeader() {
+    const saved = totalSaved();
+    const cnt   = totalDone();
+    const pct   = META > 0 ? saved/META : 0;
+    document.getElementById('hSaved').textContent = fmt(saved);
+    document.getElementById('hFill').style.width  = (pct*100).toFixed(2)+'%';
+    document.getElementById('hDays').textContent  = `${cnt} de 365 días`;
+    document.getElementById('hPct').textContent   = (pct*100).toFixed(2)+'%';
+  }
+
+  // ── Resumen mes ──
+  function refreshMonthSummary() {
+    const m    = mesActual;
+    const s    = mSaved(m), g = mGoal(m), dn = mDone(m), tot = mDays(m);
+    const pct  = g>0 ? s/g : 0;
+    document.getElementById('sSaved').textContent = fmt(s);
+    document.getElementById('sGoal').textContent  = fmt(g);
+    document.getElementById('sDays').textContent  = `${dn}/${tot}`;
+    document.getElementById('mFill').style.width  = (pct*100).toFixed(2)+'%';
+  }
+
+  // ── Toggle día ──
+  function toggle(key) {
+    if (done[key]) delete done[key]; else done[key] = 1;
+    save();
+    const card = document.getElementById('c-'+key);
+    if (card) {
+      card.classList.toggle('done', !!done[key]);
+      card.querySelector('.check').textContent = done[key] ? '✓' : '';
+    }
+    refreshHeader();
+    refreshMonthSummary();
+    refreshMonthCard(mesActual);
+  }
+
+  // ── Renderizar lista de meses ──
+  function renderHome() {
+    const el = document.getElementById('monthList');
+    el.innerHTML = MESES.map((nombre, m) => {
+      const s = mSaved(m), g = mGoal(m), dn = mDone(m), tot = mDays(m);
+      const p = mProg(m);
+      const full = p >= 1;
+      return `<div class="month-card" id="mc-${m}" onclick="openMonth(${m})">
+        ${charImg(m)}
+        <div class="month-info">
+          <div class="month-row1">
+            <span class="month-name">${nombre}</span>
+            <span class="month-days">${dn}/${tot}${full ? ' <span class="seal">✓</span>' : ''}</span>
+          </div>
+          <div class="prog-track"><div class="prog-track-fill" style="width:${(p*100).toFixed(1)}%"></div></div>
+          <div class="month-row2">
+            <span class="m-saved">${fmt(s)}</span>
+            <span class="m-of">de ${fmt(g)}</span>
+            <span class="chevron">›</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function refreshMonthCard(m) {
+    const s = mSaved(m), g = mGoal(m), dn = mDone(m), tot = mDays(m);
+    const p = mProg(m);
+    const full = p >= 1;
+    const card = document.getElementById('mc-'+m);
+    if (!card) return;
+    card.querySelector('.month-days').innerHTML = `${dn}/${tot}${full ? ' <span class="seal">✓</span>' : ''}`;
+    card.querySelector('.prog-track-fill').style.width = (p*100).toFixed(1)+'%';
+    card.querySelector('.m-saved').textContent = fmt(s);
+  }
+
+  // ── Renderizar días del mes ──
+  function renderDays(m) {
+    const dias = YEAR.filter(d => d.m === m);
+    document.getElementById('dayList').innerHTML = dias.map(d => {
+      const isDone = !!done[d.key];
+      const isHoy  = d.key === HOY;
+      const isWE   = d.dow === 0 || d.dow === 6;
+      return `<div class="day-card${isDone?' done':''}${isHoy?' hoy':''}${isWE?' weekend':''}"
+                   id="c-${d.key}" onclick="toggle('${d.key}')">
+        <div class="date-col">
+          <span class="d-num">${d.d}</span>
+          <span class="d-name">${DIAS_C[d.dow]}</span>
+          ${isHoy ? '<div class="hoy-dot"></div>' : ''}
+        </div>
+        <div class="mid-col">
+          <div class="d-amt">${fmt(d.monto)}</div>
+          <div class="d-serie">${d.serie}</div>
+        </div>
+        <div class="check">${isDone ? '✓' : ''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Navegación ──
+  function openMonth(m) {
+    mesActual = m;
+    document.getElementById('mTitle').textContent = MESES[m];
+    refreshMonthSummary();
+    renderDays(m);
+    document.getElementById('homeScreen').classList.add('off-left');
+    document.getElementById('monthScreen').classList.remove('off-right');
+    document.getElementById('monthScreen').scrollTop = 0;
+  }
+
+  function goHome() {
+    document.getElementById('homeScreen').classList.remove('off-left');
+    document.getElementById('monthScreen').classList.add('off-right');
+  }
+
+  // ── Init ──
+  function init() {
+    const h = new Date();
+    document.getElementById('todayChip').textContent =
+      `${h.getDate()} ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][h.getMonth()]} ${h.getFullYear()}`;
+    refreshHeader();
+    renderHome();
+  }
+
+  init();
+</script>
+</body>
+</html>
